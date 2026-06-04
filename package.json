@@ -1,0 +1,24 @@
+{
+  "name": "private-websocket",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KoinBX private Azure Web PubSub Socket.IO server – relays Pi42 private FAWSS events to clients via Azure",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "start:dev": "ts-node src/main.ts"
+  },
+  "dependencies": {
+    "@azure/web-pubsub-socket.io": "^1.1.2",
+    "dotenv": "^16.4.5",
+    "socket.io": "4.7.5",
+    "socket.io-client": "4.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

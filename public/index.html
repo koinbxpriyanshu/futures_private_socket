@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KoinBX Private Socket Test</title>
+  <style>
+    :root { color-scheme: dark; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+    }
+    .badge.connected { background: #0d2818; border-color: #238636; color: #3fb950; }
+    .badge.error     { background: #2d0f0f; border-color: #f85149; color: #f85149; }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      flex: 1;
+      height: calc(100vh - 57px);
+      overflow: hidden;
+    }
+
+    /* ── Left panel ── */
+    .sidebar {
+      background: #161b22;
+      border-right: 1px solid #30363d;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #8b949e;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 4px;
+      margin-top: 10px;
+    }
+    label:first-of-type { margin-top: 0; }
+
+    input {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #e6edf3;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #388bfd; }
+
+    .btn-group { display: flex; flex-direction: column; gap: 8px; }
+
+    button {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary   { background: #238636; border-color: #2ea043; color: #fff; }
+    .btn-secondary { background: #21262d; border-color: #30363d; color: #e6edf3; }
+    .btn-danger    { background: #b91c1c; border-color: #f85149; color: #fff; }
+    .btn-info      { background: #1f4e79; border-color: #388bfd; color: #e6edf3; }
+
+    button:not(:disabled):hover { opacity: 0.85; }
+
+    /* ── Right panel ── */
+    .log-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .log-toolbar {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .log-toolbar span { font-size: 12px; color: #8b949e; }
+
+    .log-toolbar-right { display: flex; gap: 8px; align-items: center; }
+
+    #eventCount {
+      font-size: 11px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .clear-btn {
+      width: auto;
+      font-size: 11px;
+      padding: 3px 10px;
+    }
+
+    #log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 80px 160px 1fr;
+      gap: 8px;
+      align-items: baseline;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      border: 1px solid transparent;
+    }
+    .log-entry:hover { background: #161b22; }
+
+    .log-entry.type-system { color: #8b949e; }
+    .log-entry.type-connect { border-color: #1a3a2a; background: #0d2818; }
+    .log-entry.type-event  { border-color: #1f3a5f; background: #0d1f35; }
+    .log-entry.type-error  { border-color: #3d1010; background: #1f0808; }
+    .log-entry.type-info   { border-color: #2a2a1a; background: #1a1a0d; }
+
+    .log-time { color: #484f58; font-size: 11px; }
+
+    .log-event {
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .type-connect .log-event { color: #3fb950; }
+    .type-event   .log-event { color: #79c0ff; }
+    .type-error   .log-event { color: #f85149; }
+    .type-info    .log-event { color: #e3b341; }
+    .type-system  .log-event { color: #8b949e; }
+
+    .log-data {
+      color: #d2a679;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: hidden;
+    }
+    .log-data.collapsed {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+    .log-data.collapsed:hover { color: #fff; }
+
+    @media (max-width: 700px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { border-right: none; border-bottom: 1px solid #30363d; max-height: 50vh; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>KoinBX · Private Socket Test</h1>
+  <div id="statusBadge" class="badge"><span class="dot"></span><span id="statusText">Disconnected</span></div>
+</header>
+
+<div class="layout">
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="sidebar">
+
+    <div class="section">
+      <div class="section-title">Azure Connection</div>
+
+      <label for="serverUrl">Azure Endpoint URL</label>
+      <input id="serverUrl" value="https://kbx-futures-stage.webpubsub.azure.com" />
+
+      <label for="hubName">Hub Name</label>
+      <input id="hubName" value="KoinBX_Private_Hub" />
+
+      <label for="clientToken">Client Token <small style="color:#484f58">(optional)</small></label>
+      <input id="clientToken" type="password" placeholder="Only if PRIVATE_SOCKET_CLIENT_TOKEN is set" />
+    </div>
+
+    <div class="section">
+      <div class="section-title">Connection</div>
+      <div class="btn-group">
+        <button id="connectBtn" class="btn-primary">Connect to Azure</button>
+        <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Account Subscription</div>
+      <label for="accountId">Account ID</label>
+      <input id="accountId" placeholder="Pi42 accountId (e.g. 927)" />
+      <div class="btn-group" style="margin-top:10px">
+        <button id="subscribeBtn" class="btn-info" disabled>Subscribe Account</button>
+        <button id="unsubscribeBtn" class="btn-secondary" disabled>Unsubscribe Account</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Utilities</div>
+      <div class="btn-group">
+        <button id="pingBtn" class="btn-secondary" disabled>Send Ping</button>
+      </div>
+    </div>
+
+    <div class="section" style="border-bottom:none">
+      <div class="section-title">Info</div>
+      <div style="font-size:11px;color:#484f58;line-height:1.6">
+        Client connects to Azure Web PubSub.<br>
+        This server bridges Pi42 → Azure.<br>
+        Events appear as they arrive from Pi42.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LOG PANEL ── -->
+  <div class="log-panel">
+    <div class="log-toolbar">
+      <span>Event Stream</span>
+      <div class="log-toolbar-right">
+        <span id="eventCount">0 events</span>
+        <button class="btn-secondary clear-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  let socket;
+  let eventCount = 0;
+
+  const statusBadge  = document.getElementById('statusBadge');
+  const statusText   = document.getElementById('statusText');
+  const logEl        = document.getElementById('log');
+  const eventCountEl = document.getElementById('eventCount');
+  const serverUrlEl  = document.getElementById('serverUrl');
+  const hubNameEl    = document.getElementById('hubName');
+  const tokenEl      = document.getElementById('clientToken');
+  const accountIdEl  = document.getElementById('accountId');
+
+  const connectBtn     = document.getElementById('connectBtn');
+  const disconnectBtn  = document.getElementById('disconnectBtn');
+  const subscribeBtn   = document.getElementById('subscribeBtn');
+  const unsubscribeBtn = document.getElementById('unsubscribeBtn');
+  const pingBtn        = document.getElementById('pingBtn');
+  const clearBtn       = document.getElementById('clearBtn');
+
+  function setStatus(text, state) {
+    statusText.textContent = text;
+    statusBadge.className  = 'badge' + (state ? ' ' + state : '');
+  }
+
+  function setConnected(yes) {
+    connectBtn.disabled     = yes;
+    disconnectBtn.disabled  = !yes;
+    subscribeBtn.disabled   = !yes;
+    unsubscribeBtn.disabled = !yes;
+    pingBtn.disabled        = !yes;
+  }
+
+  function addLog(type, eventName, data) {
+    eventCount++;
+    eventCountEl.textContent = `${eventCount} event${eventCount !== 1 ? 's' : ''}`;
+
+    const ts     = new Date().toLocaleTimeString('en', { hour12: false });
+    const entry  = document.createElement('div');
+    entry.className = `log-entry type-${type}`;
+
+    const timeEl  = document.createElement('span');
+    timeEl.className = 'log-time';
+    timeEl.textContent = ts;
+
+    const evEl   = document.createElement('span');
+    evEl.className = 'log-event';
+    evEl.textContent = eventName;
+
+    const dataEl = document.createElement('span');
+    dataEl.className = 'log-data collapsed';
+
+    let dataStr = '';
+    if (data !== undefined) {
+      try { dataStr = JSON.stringify(data, null, 2); } catch { dataStr = String(data); }
+    }
+
+    if (dataStr) {
+      // Show single-line preview; click to expand
+      const preview = dataStr.replace(/\n/g, ' ').slice(0, 200);
+      dataEl.textContent = preview;
+      dataEl.dataset.full      = dataStr;
+      dataEl.dataset.collapsed = 'true';
+      dataEl.addEventListener('click', () => {
+        if (dataEl.dataset.collapsed === 'true') {
+          dataEl.textContent = dataEl.dataset.full;
+          dataEl.className   = 'log-data';
+          dataEl.dataset.collapsed = 'false';
+        } else {
+          dataEl.textContent = preview;
+          dataEl.className   = 'log-data collapsed';
+          dataEl.dataset.collapsed = 'true';
+        }
+      });
+    }
+
+    entry.append(timeEl, evEl, dataEl);
+    logEl.appendChild(entry);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function connect() {
+    const serverUrl = serverUrlEl.value.trim();
+    const hub       = hubNameEl.value.trim() || 'KoinBX_Private_Hub';
+    const token     = tokenEl.value.trim();
+
+    // Azure Web PubSub Socket.IO path format:
+    //   /clients/socketio/hubs/<HUB_NAME>
+    const socketPath = `/clients/socketio/hubs/${hub}`;
+
+    addLog('system', 'connecting', { serverUrl, socketPath });
+
+    socket = io(serverUrl, {
+      path: socketPath,
+      auth: token ? { token } : {},
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      setStatus(`Connected · ${socket.id}`, 'connected');
+      setConnected(true);
+      addLog('connect', 'connected', { id: socket.id });
+    });
+
+    socket.on('disconnect', (reason) => {
+      setStatus('Disconnected', '');
+      setConnected(false);
+      addLog('error', 'disconnect', { reason });
+    });
+
+    socket.on('connect_error', (err) => {
+      setStatus(`Error: ${err.message}`, 'error');
+      addLog('error', 'connect_error', { message: err.message });
+    });
+
+    socket.on('pong', () => addLog('info', 'pong', null));
+
+    socket.on('privateSubscriptionStatus', (data) => addLog('info', 'privateSubscriptionStatus', data));
+
+    // ── Catch ALL events (including private Pi42 events) ──────────────────
+    socket.onAny((eventName, ...args) => {
+      const skip = ['connect', 'disconnect', 'connect_error', 'pong', 'privateSubscriptionStatus'];
+      if (skip.includes(eventName)) return;
+      addLog('event', eventName, args.length === 1 ? args[0] : args);
+    });
+  }
+
+  connectBtn.addEventListener('click', connect);
+
+  disconnectBtn.addEventListener('click', () => {
+    if (socket) { socket.disconnect(); socket = null; }
+    setStatus('Disconnected', '');
+    setConnected(false);
+  });
+
+  subscribeBtn.addEventListener('click', () => {
+    const accountId = accountIdEl.value.trim();
+    if (!accountId) { addLog('error', 'error', 'accountId is required'); return; }
+    const payload = { accountId, token: tokenEl.value.trim() };
+    socket.emit('subscribePrivate', payload);
+    addLog('info', 'subscribePrivate →', payload);
+  });
+
+  unsubscribeBtn.addEventListener('click', () => {
+    const accountId = accountIdEl.value.trim();
+    if (!accountId) { addLog('error', 'error', 'accountId is required'); return; }
+    const payload = { accountId };
+    socket.emit('unsubscribePrivate', payload);
+    addLog('info', 'unsubscribePrivate →', payload);
+  });
+
+  pingBtn.addEventListener('click', () => {
+    socket.emit('ping');
+    addLog('info', 'ping →', null);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    logEl.innerHTML = '';
+    eventCount = 0;
+    eventCountEl.textContent = '0 events';
+  });
+</script>
+</body>
+</html>
