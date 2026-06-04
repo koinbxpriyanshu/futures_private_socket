@@ -244,8 +244,8 @@
       <label for="hubName">Hub Name</label>
       <input id="hubName" value="KoinBX_Private_Hub" />
 
-      <label for="clientToken">Client Token <small style="color:#484f58">(optional)</small></label>
-      <input id="clientToken" type="password" placeholder="Only if PRIVATE_SOCKET_CLIENT_TOKEN is set" />
+      <label for="clientToken">User JWT Token <small style="color:#484f58">(access_token from login)</small></label>
+      <input id="clientToken" type="password" placeholder="Paste your KoinBX access_token here" />
     </div>
 
     <div class="section">
@@ -254,15 +254,8 @@
         <button id="connectBtn" class="btn-primary">Connect to Azure</button>
         <button id="disconnectBtn" class="btn-danger" disabled>Disconnect</button>
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Account Subscription</div>
-      <label for="accountId">Account ID</label>
-      <input id="accountId" placeholder="Pi42 accountId (e.g. 927)" />
-      <div class="btn-group" style="margin-top:10px">
-        <button id="subscribeBtn" class="btn-info" disabled>Subscribe Account</button>
-        <button id="unsubscribeBtn" class="btn-secondary" disabled>Unsubscribe Account</button>
+      <div id="resolvedAccount" style="margin-top:10px;font-size:12px;color:#3fb950;display:none">
+        ✓ Subscribed securely
       </div>
     </div>
 
@@ -274,11 +267,12 @@
     </div>
 
     <div class="section" style="border-bottom:none">
-      <div class="section-title">Info</div>
+      <div class="section-title">How it works</div>
       <div style="font-size:11px;color:#484f58;line-height:1.6">
-        Client connects to Azure Web PubSub.<br>
-        This server bridges Pi42 → Azure.<br>
-        Events appear as they arrive from Pi42.
+        1. Paste your <code>access_token</code> from KoinBX login.<br>
+        2. Server verifies JWT &amp; looks up your <code>PI42_AccountId</code> from DB.<br>
+        3. Your account is subscribed automatically.<br>
+        4. Pi42 private events appear here in real-time.
       </div>
     </div>
   </div>
@@ -301,19 +295,17 @@
   let socket;
   let eventCount = 0;
 
-  const statusBadge  = document.getElementById('statusBadge');
-  const statusText   = document.getElementById('statusText');
-  const logEl        = document.getElementById('log');
-  const eventCountEl = document.getElementById('eventCount');
-  const serverUrlEl  = document.getElementById('serverUrl');
-  const hubNameEl    = document.getElementById('hubName');
-  const tokenEl      = document.getElementById('clientToken');
-  const accountIdEl  = document.getElementById('accountId');
+  const statusBadge        = document.getElementById('statusBadge');
+  const statusText          = document.getElementById('statusText');
+  const logEl               = document.getElementById('log');
+  const eventCountEl        = document.getElementById('eventCount');
+  const serverUrlEl         = document.getElementById('serverUrl');
+  const hubNameEl           = document.getElementById('hubName');
+  const tokenEl             = document.getElementById('clientToken');
+  const resolvedAccountDiv  = document.getElementById('resolvedAccount');
 
   const connectBtn     = document.getElementById('connectBtn');
   const disconnectBtn  = document.getElementById('disconnectBtn');
-  const subscribeBtn   = document.getElementById('subscribeBtn');
-  const unsubscribeBtn = document.getElementById('unsubscribeBtn');
   const pingBtn        = document.getElementById('pingBtn');
   const clearBtn       = document.getElementById('clearBtn');
 
@@ -323,11 +315,12 @@
   }
 
   function setConnected(yes) {
-    connectBtn.disabled     = yes;
-    disconnectBtn.disabled  = !yes;
-    subscribeBtn.disabled   = !yes;
-    unsubscribeBtn.disabled = !yes;
-    pingBtn.disabled        = !yes;
+    connectBtn.disabled    = yes;
+    disconnectBtn.disabled = !yes;
+    pingBtn.disabled       = !yes;
+    if (!yes) {
+      resolvedAccountDiv.style.display = 'none';
+    }
   }
 
   function addLog(type, eventName, data) {
@@ -401,6 +394,12 @@
       addLog('connect', 'connected', { id: socket.id });
     });
 
+    socket.on('subscribed', (data) => {
+      // Server confirmed subscription
+      resolvedAccountDiv.style.display = 'block';
+      addLog('connect', 'subscribed', data);
+    });
+
     socket.on('disconnect', (reason) => {
       setStatus('Disconnected', '');
       setConnected(false);
@@ -416,9 +415,9 @@
 
     socket.on('privateSubscriptionStatus', (data) => addLog('info', 'privateSubscriptionStatus', data));
 
-    // ── Catch ALL events (including private Pi42 events) ──────────────────
+    // ── Catch ALL events ──────────────────────────────────────────────────
     socket.onAny((eventName, ...args) => {
-      const skip = ['connect', 'disconnect', 'connect_error', 'pong', 'privateSubscriptionStatus'];
+      const skip = ['connect', 'disconnect', 'connect_error', 'pong', 'privateSubscriptionStatus', 'subscribed'];
       if (skip.includes(eventName)) return;
       addLog('event', eventName, args.length === 1 ? args[0] : args);
     });
@@ -430,22 +429,6 @@
     if (socket) { socket.disconnect(); socket = null; }
     setStatus('Disconnected', '');
     setConnected(false);
-  });
-
-  subscribeBtn.addEventListener('click', () => {
-    const accountId = accountIdEl.value.trim();
-    if (!accountId) { addLog('error', 'error', 'accountId is required'); return; }
-    const payload = { accountId, token: tokenEl.value.trim() };
-    socket.emit('subscribePrivate', payload);
-    addLog('info', 'subscribePrivate →', payload);
-  });
-
-  unsubscribeBtn.addEventListener('click', () => {
-    const accountId = accountIdEl.value.trim();
-    if (!accountId) { addLog('error', 'error', 'accountId is required'); return; }
-    const payload = { accountId };
-    socket.emit('unsubscribePrivate', payload);
-    addLog('info', 'unsubscribePrivate →', payload);
   });
 
   pingBtn.addEventListener('click', () => {
