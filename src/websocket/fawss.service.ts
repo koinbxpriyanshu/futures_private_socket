@@ -56,6 +56,7 @@ export class FawssService implements OnModuleInit, OnModuleDestroy {
 
       const accountId = this.getAccountIdFromData(data);
       if (!accountId) {
+        this.logger.warn(`[FAWSS] Dropped event '${eventName}' because accountId could not be extracted. Payload: ${JSON.stringify(data).substring(0, 200)}...`);
         return;
       }
 

@@ -61,7 +61,6 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       // Confirm subscription without exposing accountId
       socket.emit('subscribed', { success: true });
-      this.logger.log(`[${socket.id}] Connected and subscribed accountId=${pi42AccountId}`);
 
     } catch (error: any) {
       this.logger.error(`[${socket.id}] Connection failed: ${error.message}`);
@@ -71,7 +70,6 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   handleDisconnect(socket: Socket) {
     this.cleanupSocket(socket);
-    this.logger.log(`[${socket.id}] Disconnected`);
   }
 
   @SubscribeMessage('ping')

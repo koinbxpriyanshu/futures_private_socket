@@ -94,7 +94,6 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       const accountId = String(row.PI42_AccountId);
       // 2. Store in cache for all future connections from this user
       this.accountIdCache.set(userPublicGuid, accountId);
-      this.logger.debug(`Resolved PI42_AccountId=${accountId} for UserPublicGUID=${userPublicGuid} (cached)`);
       
       return accountId;
     } catch (err: any) {
