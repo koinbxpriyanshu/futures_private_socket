@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { DatabaseService } from './database/database.service';
 import { AzureIoAdapter } from './websocket/azure-io.adapter';
 import * as express from 'express';
 import * as path from 'path';
@@ -27,12 +26,7 @@ async function bootstrap() {
   
   // Health check
   app.use('/health', (req: any, res: any) => {
-    const dbService = app.get(DatabaseService);
-    res.json({
-      status: 'ok',
-      service: 'private-websocket-nestjs',
-      cacheSize: dbService.getCacheSize(),
-    });
+    res.json({ status: 'ok' });
   });
 
   await app.listen(port);
